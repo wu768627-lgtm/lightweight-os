@@ -4,7 +4,7 @@
 
 ## 简介
 
-LightweightOS 是一个基于微内核架构的操作系统，旨在提供卓越的性能、强大的安全性和极小的资源占用。它专为成为"性能小钢炮"而设计，适合资源受限的环境，同时不牺牲功能性和安全性。项目支持本地开发、云平台测试和预构建发布包安装，方便开发者在不同环境中进行构建和验证。
+LightweightOS 是一个基于微内核架构的操作系统，旨在提供卓越的性能、强大的安全性和极小的资源占用。它专为成为"性能小钢炮"而设计，适合资源受限的环境，同时不牺牲功能性和安全性。项目支持本地开发和云平台测试，方便开发者在不同环境中进行构建和验证。
 
 ## 特性
 
@@ -80,16 +80,6 @@ LightweightOS 是一个基于微内核架构的操作系统，旨在提供卓越
   - [性能优化](docs/performance.md)
   - [测试计划](docs/testing.md)
 
-## 发布包
-
-您可以从 GitHub Release 页面下载 LightweightOS 的预构建发布包：
-
-1. 访问 [Releases](https://github.com/wu768627-lgtm/lightweight-os/releases) 页面
-2. 下载最新的发布包 ZIP 文件
-3. 解压到您想要的目录即可使用
-
-发布包包含完整的系统镜像和必要的工具，无需额外构建。
-
 ## 构建说明
 
 ### 环境要求
@@ -97,6 +87,66 @@ LightweightOS 是一个基于微内核架构的操作系统，旨在提供卓越
 - GNU Make
 - NASM 汇编器
 - QEMU (用于测试)
+
+## 发布包
+
+我们提供预构建的发布包，方便用户快速体验和使用 LightweightOS。发布包包含完整的系统镜像、可执行文件和文档。
+
+### 发布包内容
+- 系统镜像文件 (lightweightos.img)
+- 内核可执行文件 (kernel.bin)
+- 用户空间程序
+- 文档 (PDF 格式)
+- 示例配置文件
+- 启动脚本 (run.sh)
+
+### 下载发布包
+您可以从 GitHub Releases 页面下载最新的发布包：
+```bash
+# 下载发布包 (示例)
+wget https://github.com/lightweight-os/lightweight-os/releases/download/v1.0.0/lightweight-os-v1.0.0.zip
+```
+
+### 使用发布包
+1. 下载并解压发布包：
+   ```bash
+   unzip lightweight-os-v1.0.0.zip
+   cd lightweight-os-v1.0.0
+   ```
+
+2. 赋予运行权限：
+   ```bash
+   chmod +x run.sh
+   ```
+
+3. 运行系统：
+   ```bash
+   ./run.sh
+   ```
+
+### 验证发布包
+为确保发布包的完整性和安全性，我们提供以下验证方式：
+- SHA256 校验
+- GPG 签名验证
+- 代码签名证书验证
+
+详细验证步骤请参阅 [发布包验证指南](RELEASE_VERIFICATION.md)。
+
+## 版本发布
+
+我们的发布周期为每季度一次，包含以下版本类型：
+- 开发版本 (nightly)
+- 测试版本 (beta)
+- 稳定版本 (stable)
+
+每个版本包含：
+- 完整的系统镜像
+- 文档
+- 校验文件
+- 签名文件
+- 版本说明 (RELEASE.md)
+
+版本发布信息请参阅 [版本发布文档](RELEASE.md)。
 
 ### 构建流程
 所有构建操作都可通过 Makefile 完成：

@@ -15,16 +15,9 @@ jobs:
 
     - name: Set up environment
       run: |
-        echo "Setting up environment for release build"
+        echo "Setting up build environment..."
         sudo apt-get update
-        sudo apt-get install -y build-essential nasm gcc-multilib zip tar
-
-    - name: Get version
-      id: get_version
-      run: |
-        TAG_NAME=${GITHUB_REF#refs/tags/}
-        echo "VERSION=${TAG_NAME#v}" >> $GITHUB_ENV
-        echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+        sudo apt-get install -y build-essential nasm gcc-multilib qemu-system-x86 dosfstools zip
 
     - name: Build project
       run: |
@@ -34,6 +27,7 @@ jobs:
 
     - name: Verify build artifacts
       run: |
+        echo "Verifying build artifacts..."
         if [ -f "boot/boot.bin" ]; then
           echo "✓ Bootloader built successfully ($(stat -c%s boot/boot.bin) bytes)"
         else
@@ -51,70 +45,55 @@ jobs:
     - name: Create packages
       run: |
         echo "Creating release packages..."
-        PACKAGE_NAME="lightweight-os-v${VERSION}"
+        VERSION=${GITHUB_REF#refs/tags/}
+        PACKAGE_NAME="lightweight-os-${VERSION}"
         
         # Create temporary directory
-        TEMP_DIR="/tmp/${PACKAGE_NAME}"
-        rm -rf "${TEMP_DIR}"
-        mkdir -p "${TEMP_DIR}"
+        mkdir -p "/tmp/${PACKAGE_NAME}"
         
         # Copy files
-        cp -r boot "${TEMP_DIR}/"
-        cp -r kernel "${TEMP_DIR}/"
-        cp -r drivers "${TEMP_DIR}/"
-        cp -r libs "${TEMP_DIR}/"
-        cp -r userland "${TEMP_DIR}/"
-        cp -r tools "${TEMP_DIR}/"
-        cp -r docs "${TEMP_DIR}/"
-        cp -r .github "${TEMP_DIR}/"
+        cp -r boot "/tmp/${PACKAGE_NAME}/"
+        cp -r kernel "/tmp/${PACKAGE_NAME}/"
+        cp -r drivers "/tmp/${PACKAGE_NAME}/"
+        cp -r libs "/tmp/${PACKAGE_NAME}/"
+        cp -r userland "/tmp/${PACKAGE_NAME}/"
+        cp -r tools "/tmp/${PACKAGE_NAME}/"
+        cp -r docs "/tmp/${PACKAGE_NAME}/"
+        cp -r .github "/tmp/${PACKAGE_NAME}/"
         
-        cp build.sh "${TEMP_DIR}/"
-        cp run.sh "${TEMP_DIR}/"
-        cp run-qemu.sh "${TEMP_DIR}/"
-        cp push-to-github.sh "${TEMP_DIR}/"
-        cp push-to-github.bat "${TEMP_DIR}/"
-        cp diagnose.sh "${TEMP_DIR}/"
-        cp package.sh "${TEMP_DIR}/"
-        cp package.bat "${TEMP_DIR}/"
-        cp package.ps1 "${TEMP_DIR}/"
-        cp Makefile "${TEMP_DIR}/"
-        cp README.md "${TEMP_DIR}/"
-        cp RELEASE.md "${TEMP_DIR}/"
-        cp wuying-test-config.json "${TEMP_DIR}/"
-        cp static-analysis.py "${TEMP_DIR}/"
-        cp unit-test-sim.py "${TEMP_DIR}/"
-        cp coverage-analysis.py "${TEMP_DIR}/"
-        cp integration-test.py "${TEMP_DIR}/"
-        cp run-tests.py "${TEMP_DIR}/"
-        cp bug-test.py "${TEMP_DIR}/"
-        cp bug-test-improved.py "${TEMP_DIR}/"
+        cp build.sh "/tmp/${PACKAGE_NAME}/"
+        cp run.sh "/tmp/${PACKAGE_NAME}/"
+        cp run-qemu.sh "/tmp/${PACKAGE_NAME}/"
+        cp push-to-github.sh "/tmp/${PACKAGE_NAME}/"
+        cp push-to-github.bat "/tmp/${PACKAGE_NAME}/"
+        cp diagnose.sh "/tmp/${PACKAGE_NAME}/"
+        cp Makefile "/tmp/${PACKAGE_NAME}/"
+        cp README.md "/tmp/${PACKAGE_NAME}/"
+        cp RELEASE.md "/tmp/${PACKAGE_NAME}/"
+        cp wuying-test-config.json "/tmp/${PACKAGE_NAME}/"
+        cp static-analysis.py "/tmp/${PACKAGE_NAME}/"
+        cp unit-test-sim.py "/tmp/${PACKAGE_NAME}/"
+        cp coverage-analysis.py "/tmp/${PACKAGE_NAME}/"
+        cp integration-test.py "/tmp/${PACKAGE_NAME}/"
+        cp run-tests.py "/tmp/${PACKAGE_NAME}/"
+        cp bug-test.py "/tmp/${PACKAGE_NAME}/"
+        cp bug-test-improved.py "/tmp/${PACKAGE_NAME}/"
         
         # Create version file
-        cat > "${TEMP_DIR}/VERSION" << EOF
-        LightweightOS Version ${VERSION}
-        Release Date: $(date)
-        Git Commit: ${GITHUB_SHA}
-        EOF
+        echo "LightweightOS ${VERSION}" > "/tmp/${PACKAGE_NAME}/VERSION"
+        echo "Released on: $(date)" >> "/tmp/${PACKAGE_NAME}/VERSION"
         
-        # Set permissions
-        find "${TEMP_DIR}" -name "*.sh" -exec chmod +x {} \;
-        find "${TEMP_DIR}" -name "*.py" -exec chmod +x {} \;
-        
-        # Create tar.gz package
-        echo "Creating tar.gz package..."
-        tar -czf "${PACKAGE_NAME}.tar.gz" -C /tmp "${PACKAGE_NAME}"
-        
-        # Create zip package
-        echo "Creating zip package..."
+        # Create packages
         cd /tmp
-        zip -r "${PACKAGE_NAME}.zip" "${PACKAGE_NAME}" > /dev/null
-        mv "${PACKAGE_NAME}.zip" "$(pwd)/../${PACKAGE_NAME}.zip"
-        cd -
+        zip -r "${PACKAGE_NAME}.zip" "${PACKAGE_NAME}"
+        tar -czf "${PACKAGE_NAME}.tar.gz" "${PACKAGE_NAME}"
         
-        # Show package info
-        echo "Package information:"
-        echo "  TAR.GZ: ${PACKAGE_NAME}.tar.gz ($(stat -c%s "${PACKAGE_NAME}.tar.gz") bytes)"
-        echo "  ZIP: ${PACKAGE_NAME}.zip ($(stat -c%s "${PACKAGE_NAME}.zip") bytes)"
+        # Move packages to workspace
+        mv "${PACKAGE_NAME}.zip" "${PACKAGE_NAME}.tar.gz" "${GITHUB_WORKSPACE}/"
+        
+        cd "${GITHUB_WORKSPACE}"
+        echo "Packages created:"
+        ls -lh lightweight-os-*.zip lightweight-os-*.tar.gz
 
     - name: Create Release
       id: create_release
@@ -122,28 +101,50 @@ jobs:
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
-        tag_name: ${{ env.TAG_NAME }}
-        release_name: Release ${{ env.TAG_NAME }}
-        body_path: RELEASE.md
+        tag_name: ${{ github.ref }}
+        release_name: Release ${{ github.ref }}
+        body: |
+          ## LightweightOS Release
+          
+          Thank you for downloading LightweightOS! This release contains the complete source code and pre-built binaries.
+          
+          ### Installation
+          
+          1. Download either the ZIP or TAR.GZ package
+          2. Extract the archive
+          3. Follow the instructions in README.md to build and run
+          
+          ### Contents
+          
+          - Full source code
+          - Build scripts
+          - Documentation
+          - Test suite
+          
+          ### System Requirements
+          
+          - NASM (assembler)
+          - GCC (C compiler)
+          - QEMU (for testing)
         draft: false
         prerelease: false
 
-    - name: Upload tar.gz package
+    - name: Upload ZIP Asset
       uses: actions/upload-release-asset@v1
       env:
         GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
       with:
         upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./lightweight-os-v${{ env.VERSION }}.tar.gz
-        asset_name: lightweight-os-v${{ env.VERSION }}.tar.gz
-        asset_content_type: application/gzip
-
-    - name: Upload zip package
-      uses: actions/upload-release-asset@v1
-      env:
-        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-      with:
-        upload_url: ${{ steps.create_release.outputs.upload_url }}
-        asset_path: ./lightweight-os-v${{ env.VERSION }}.zip
-        asset_name: lightweight-os-v${{ env.VERSION }}.zip
+        asset_path: ./lightweight-os-*.zip
+        asset_name: lightweight-os-${{ github.ref_name }}.zip
         asset_content_type: application/zip
+
+    - name: Upload TAR.GZ Asset
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./lightweight-os-*.tar.gz
+        asset_name: lightweight-os-${{ github.ref_name }}.tar.gz
+        asset_content_type: application/gzip
