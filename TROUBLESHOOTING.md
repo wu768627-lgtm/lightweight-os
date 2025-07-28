@@ -6,33 +6,7 @@
 
 如果您在 GitHub Actions 中看到构建失败，可能的原因包括：
 
-### 1. Actions 版本弃用问题
-
-GitHub 定期弃用旧版本的 Actions。如果看到类似以下错误：
-
-```
-错误：此请求已自动失败，因为它使用了已弃用的"actions/upload-artifact: v3"版本
-```
-
-需要更新工作流文件中的 Actions 版本。在 [.github/workflows/build-and-test.yml](file:///f%3A/app2/Desktop/kg/lightweight-os/.github/workflows/build-and-test.yml) 中：
-
-```yaml
-# 将旧版本：
-- name: Upload build artifacts
-  uses: actions/upload-artifact@v3
-
-# 更新为新版本：
-- name: Upload build artifacts
-  uses: actions/upload-artifact@v4
-```
-
-同样，检查其他 Actions 的版本：
-```yaml
-# 确保使用较新的版本
-- uses: actions/checkout@v4  # 而不是 v3
-```
-
-### 2. 依赖项安装问题
+### 1. 依赖项安装问题
 
 确保所有必要的依赖项都已正确安装：
 
@@ -43,7 +17,7 @@ GitHub 定期弃用旧版本的 Actions。如果看到类似以下错误：
     sudo apt-get install -y build-essential nasm gcc-multilib qemu-system-x86 dosfstools
 ```
 
-### 3. 构建脚本权限问题
+### 2. 构建脚本权限问题
 
 确保构建脚本具有执行权限：
 
@@ -52,7 +26,7 @@ chmod +x build.sh
 ./build.sh
 ```
 
-### 4. 文件路径问题
+### 3. 文件路径问题
 
 确保所有文件路径正确，特别是相对路径：
 
@@ -64,7 +38,7 @@ if [ ! -f "boot/boot.bin" ]; then
 fi
 ```
 
-### 5. 构建脚本错误
+### 4. 构建脚本错误
 
 检查 [build.sh](file:///f%3A/app2/Desktop/kg/lightweight-os/build.sh) 脚本是否正确：
 
@@ -202,7 +176,6 @@ chmod +x *.sh
 4. [ ] 测试脚本能够独立运行
 5. [ ] README 文件已更新
 6. [ ] 文档文件完整
-7. [ ] GitHub Actions 使用最新版本的 actions
 
 ## 调试技巧
 
