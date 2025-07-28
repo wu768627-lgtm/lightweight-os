@@ -1,0 +1,61 @@
+name: Test Build OS
+
+on:
+  push:
+    branches: [ test-build ]
+  workflow_dispatch:
+
+jobs:
+  test-build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Install minimal dependencies
+      run: |
+        echo "Installing minimal dependencies..."
+        sudo apt-get update
+        sudo apt-get install -y nasm gcc qemu-system-x86
+        
+        echo "Verifying installations..."
+        nasm --version
+        gcc --version
+        qemu-system-i386 --version
+
+    - name: Simple build test
+      run: |
+        echo "Directory structure:"
+        ls -la
+        
+        echo "Building bootloader only..."
+        if [ -f "boot/boot.s" ]; then
+          nasm -f bin boot/boot.s -o boot/boot.bin
+          echo "Bootloader built: boot/boot.bin ($(stat -c%s boot/boot.bin) bytes)"
+        else
+          echo "ERROR: boot/boot.s not found"
+          ls -la boot/
+          exit 1
+        fi
+
+    - name: Check kernel file
+      run: |
+        echo "Checking kernel file..."
+        if [ -f "kernel/kernel.c" ]; then
+          echo "Found kernel/kernel.c ($(stat -c%s kernel/kernel.c) bytes)"
+          head -n 20 kernel/kernel.c
+        else
+          echo "ERROR: kernel/kernel.c not found"
+          ls -la kernel/
+          exit 1
+        fi
+
+    - name: Attempt kernel build
+      run: |
+        echo "Attempting to build kernel..."
+        if [ -f "kernel/kernel.c" ]; then
+          echo "Compiling kernel with minimal flags..."
+          gcc -c kernel/kernel.c -o kernel.o
+          echo "Kernel compiled to object file successfully"
+        fi
