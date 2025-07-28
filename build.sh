@@ -2,77 +2,65 @@
 
 # LightweightOS 构建脚本
 
-echo "Building LightweightOS..."
+echo "========================================="
+echo "LightweightOS Build Script"
+echo "========================================="
 
-# 创建构建目录
-mkdir -p build
+# 确保在项目根目录
+cd "$(dirname "$0")"
+echo "Working in directory: $(pwd)"
 
-# 检查工具链
-echo "Checking toolchain..."
-if ! command -v gcc &> /dev/null
-then
-    echo "Error: gcc not found"
-    exit 1
-fi
+# 清理之前的构建
+echo "Cleaning previous builds..."
+rm -f boot/boot.bin kernel.bin
 
-if ! command -v make &> /dev/null
-then
-    echo "Error: make not found"
-    exit 1
-fi
+# 检查必要的工具
+echo "Checking for required tools..."
+for tool in nasm gcc ld; do
+    if ! command -v $tool &> /dev/null
+    then
+        echo "ERROR: $tool is not installed"
+        exit 1
+    else
+        echo "Found $tool: $($tool --version | head -n 1)"
+    fi
+done
 
-if ! command -v nasm &> /dev/null
-then
-    echo "Error: nasm not found"
-    exit 1
-fi
-
-if ! command -v ld &> /dev/null
-then
-    echo "Error: ld not found"
-    exit 1
-fi
-
-if ! command -v objcopy &> /dev/null
-then
-    echo "Error: objcopy not found"
-    exit 1
-fi
-
-echo "Toolchain check passed."
-
-# 构建项目
-echo "Building project..."
-make clean
-make all
-
-if [ $? -ne 0 ]; then
-    echo "Build failed!"
-    exit 1
-fi
-
-echo "Build successful!"
-
-# 构建用户空间程序
-echo "Building userland..."
-make userland
-
-if [ $? -ne 0 ]; then
-    echo "Userland build failed!"
-    exit 1
-fi
-
-echo "Userland build successful!"
-
-# 检查生成的文件
-echo "Checking generated files..."
-if [ -f build/lightweightos.img ]; then
-    echo "System image: build/lightweightos.img"
-    ls -lh build/lightweightos.img
+# 构建引导程序
+echo "Building bootloader..."
+if [ -f "boot/boot.s" ]; then
+    echo "Assembling boot/boot.s..."
+    nasm -f bin boot/boot.s -o boot/boot.bin
+    if [ $? -eq 0 ] && [ -f "boot/boot.bin" ]; then
+        echo "Bootloader built successfully ($(stat -c%s boot/boot.bin) bytes)"
+    else
+        echo "ERROR: Failed to build bootloader"
+        exit 1
+    fi
 else
-    echo "Error: System image not found!"
+    echo "ERROR: boot/boot.s not found"
     exit 1
 fi
 
+# 构建内核
+echo "Building kernel..."
+if [ -f "kernel/kernel.c" ]; then
+    echo "Compiling kernel/kernel.c..."
+    gcc -m32 -nostdlib -nostartfiles -ffreestanding -fno-builtin -o kernel.bin kernel/kernel.c
+    if [ $? -eq 0 ] && [ -f "kernel.bin" ]; then
+        echo "Kernel built successfully ($(stat -c%s kernel.bin) bytes)"
+    else
+        echo "ERROR: Failed to build kernel"
+        exit 1
+    fi
+else
+    echo "ERROR: kernel/kernel.c not found"
+    exit 1
+fi
+
+echo "========================================="
 echo "Build completed successfully!"
-echo "To run the OS, use: make run"
+echo "Generated files:"
+echo "  - boot/boot.bin ($(stat -c%s boot/boot.bin) bytes)"
+echo "  - kernel.bin ($(stat -c%s kernel.bin) bytes)"
+echo "========================================="

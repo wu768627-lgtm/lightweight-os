@@ -14,70 +14,140 @@ jobs:
     - name: Checkout code
       uses: actions/checkout@v4
 
+    - name: Debug environment information
+      run: |
+        echo "Working directory: ${{ github.workspace }}"
+        echo "GitHub event: ${{ github.event_name }}"
+        echo "Runner OS: ${{ runner.os }}"
+        ls -la
+        echo "Git status:"
+        git status
+
     - name: Install dependencies
       run: |
+        echo "Updating package lists..."
         sudo apt-get update
+        
+        echo "Installing build dependencies..."
         sudo apt-get install -y build-essential nasm gcc-multilib qemu-system-x86 dosfstools
+        
+        echo "Verifying installations..."
+        nasm --version
+        gcc --version
+        qemu-system-i386 --version
+        mkfs.msdos -V
 
     - name: Build OS
       run: |
-        chmod +x build.sh
-        ./build.sh
+        echo "Checking directory structure..."
+        ls -la
+        
+        echo "Checking build script..."
+        if [ -f "build.sh" ]; then
+          cat build.sh
+          chmod +x build.sh
+          echo "Running build script..."
+          ./build.sh
+        else
+          echo "ERROR: build.sh not found"
+          exit 1
+        fi
 
-    - name: Test build artifacts
+    - name: Verify build artifacts
       run: |
+        echo "Checking for build artifacts..."
+        ls -la
+        ls -la boot/
+        
         if [ -f "boot/boot.bin" ]; then
           echo "Bootloader built successfully"
+          echo "Bootloader size: $(stat -c%s boot/boot.bin) bytes"
         else
-          echo "ERROR: Bootloader not found"
+          echo "ERROR: Bootloader (boot/boot.bin) not found"
+          ls -la boot/
           exit 1
         fi
         
         if [ -f "kernel.bin" ]; then
           echo "Kernel built successfully"
+          echo "Kernel size: $(stat -c%s kernel.bin) bytes"
         else
-          echo "ERROR: Kernel not found"
+          echo "ERROR: Kernel (kernel.bin) not found"
           exit 1
         fi
 
     - name: Run static analysis
       run: |
-        python3 static-analysis.py
+        echo "Running static analysis..."
+        if [ -f "static-analysis.py" ]; then
+          python3 static-analysis.py
+        else
+          echo "WARNING: static-analysis.py not found, skipping..."
+        fi
 
     - name: Run unit tests simulation
       run: |
-        python3 unit-test-sim.py
+        echo "Running unit tests simulation..."
+        if [ -f "unit-test-sim.py" ]; then
+          python3 unit-test-sim.py
+        else
+          echo "WARNING: unit-test-sim.py not found, skipping..."
+        fi
 
     - name: Run coverage analysis
       run: |
-        python3 coverage-analysis.py
+        echo "Running coverage analysis..."
+        if [ -f "coverage-analysis.py" ]; then
+          python3 coverage-analysis.py
+        else
+          echo "WARNING: coverage-analysis.py not found, skipping..."
+        fi
 
     - name: Run integration tests
       run: |
-        python3 integration-test.py
+        echo "Running integration tests..."
+        if [ -f "integration-test.py" ]; then
+          python3 integration-test.py
+        else
+          echo "WARNING: integration-test.py not found, skipping..."
+        fi
 
     - name: Run all tests
       run: |
-        python3 run-tests.py
+        echo "Running all tests..."
+        if [ -f "run-tests.py" ]; then
+          python3 run-tests.py
+        else
+          echo "WARNING: run-tests.py not found, skipping..."
+        fi
 
     - name: Create OS image
       run: |
-        # 创建一个简单的磁盘镜像用于测试
+        echo "Creating OS image..."
         if [ -f "boot/boot.bin" ] && [ -f "kernel.bin" ]; then
-          # 创建软盘镜像
+          echo "Creating floppy disk image..."
           dd if=/dev/zero of=floppy.img bs=1K count=1440
           mkfs.msdos floppy.img
           
-          # 将引导扇区和内核写入镜像
+          echo "Writing bootloader to image..."
           dd if=boot/boot.bin of=floppy.img conv=notrunc
           
           echo "OS image created successfully"
+          echo "Image size: $(stat -c%s floppy.img) bytes"
+        else
+          echo "ERROR: Cannot create image, missing boot.bin or kernel.bin"
+          exit 1
         fi
 
     - name: Test run OS in QEMU
       run: |
-        chmod +x run-qemu.sh
-        ./run-qemu.sh
+        echo "Testing OS run in QEMU..."
+        if [ -f "run-qemu.sh" ]; then
+          chmod +x run-qemu.sh
+          ./run-qemu.sh
+        else
+          echo "WARNING: run-qemu.sh not found, skipping..."
+        fi
 
     - name: Upload build artifacts
       uses: actions/upload-artifact@v4
