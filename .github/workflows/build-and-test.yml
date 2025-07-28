@@ -1,0 +1,90 @@
+name: Build and Test OS
+
+on:
+  push:
+    branches: [ main, master ]
+  pull_request:
+    branches: [ main, master ]
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y build-essential nasm gcc-multilib qemu-system-x86 dosfstools
+
+    - name: Build OS
+      run: |
+        chmod +x build.sh
+        ./build.sh
+
+    - name: Test build artifacts
+      run: |
+        if [ -f "boot/boot.bin" ]; then
+          echo "Bootloader built successfully"
+        else
+          echo "ERROR: Bootloader not found"
+          exit 1
+        fi
+        
+        if [ -f "kernel.bin" ]; then
+          echo "Kernel built successfully"
+        else
+          echo "ERROR: Kernel not found"
+          exit 1
+        fi
+
+    - name: Run static analysis
+      run: |
+        python3 static-analysis.py
+
+    - name: Run unit tests simulation
+      run: |
+        python3 unit-test-sim.py
+
+    - name: Run coverage analysis
+      run: |
+        python3 coverage-analysis.py
+
+    - name: Run integration tests
+      run: |
+        python3 integration-test.py
+
+    - name: Run all tests
+      run: |
+        python3 run-tests.py
+
+    - name: Create OS image
+      run: |
+        # 创建一个简单的磁盘镜像用于测试
+        if [ -f "boot/boot.bin" ] && [ -f "kernel.bin" ]; then
+          # 创建软盘镜像
+          dd if=/dev/zero of=floppy.img bs=1K count=1440
+          mkfs.msdos floppy.img
+          
+          # 将引导扇区和内核写入镜像
+          dd if=boot/boot.bin of=floppy.img conv=notrunc
+          
+          echo "OS image created successfully"
+        fi
+
+    - name: Test run OS in QEMU
+      run: |
+        chmod +x run-qemu.sh
+        ./run-qemu.sh
+
+    - name: Upload build artifacts
+      uses: actions/upload-artifact@v3
+      with:
+        name: os-build-artifacts
+        path: |
+          boot/boot.bin
+          kernel.bin
+          floppy.img
+        if-no-files-found: ignore
