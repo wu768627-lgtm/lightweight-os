@@ -1,0 +1,149 @@
+name: Create Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+jobs:
+  release:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v4
+
+    - name: Set up environment
+      run: |
+        echo "Setting up environment for release build"
+        sudo apt-get update
+        sudo apt-get install -y build-essential nasm gcc-multilib zip tar
+
+    - name: Get version
+      id: get_version
+      run: |
+        TAG_NAME=${GITHUB_REF#refs/tags/}
+        echo "VERSION=${TAG_NAME#v}" >> $GITHUB_ENV
+        echo "TAG_NAME=${TAG_NAME}" >> $GITHUB_ENV
+
+    - name: Build project
+      run: |
+        echo "Building LightweightOS..."
+        chmod +x build.sh
+        ./build.sh
+
+    - name: Verify build artifacts
+      run: |
+        if [ -f "boot/boot.bin" ]; then
+          echo "✓ Bootloader built successfully ($(stat -c%s boot/boot.bin) bytes)"
+        else
+          echo "✗ ERROR: Bootloader not found"
+          exit 1
+        fi
+        
+        if [ -f "kernel.bin" ]; then
+          echo "✓ Kernel built successfully ($(stat -c%s kernel.bin) bytes)"
+        else
+          echo "✗ ERROR: Kernel not found"
+          exit 1
+        fi
+
+    - name: Create packages
+      run: |
+        echo "Creating release packages..."
+        PACKAGE_NAME="lightweight-os-v${VERSION}"
+        
+        # Create temporary directory
+        TEMP_DIR="/tmp/${PACKAGE_NAME}"
+        rm -rf "${TEMP_DIR}"
+        mkdir -p "${TEMP_DIR}"
+        
+        # Copy files
+        cp -r boot "${TEMP_DIR}/"
+        cp -r kernel "${TEMP_DIR}/"
+        cp -r drivers "${TEMP_DIR}/"
+        cp -r libs "${TEMP_DIR}/"
+        cp -r userland "${TEMP_DIR}/"
+        cp -r tools "${TEMP_DIR}/"
+        cp -r docs "${TEMP_DIR}/"
+        cp -r .github "${TEMP_DIR}/"
+        
+        cp build.sh "${TEMP_DIR}/"
+        cp run.sh "${TEMP_DIR}/"
+        cp run-qemu.sh "${TEMP_DIR}/"
+        cp push-to-github.sh "${TEMP_DIR}/"
+        cp push-to-github.bat "${TEMP_DIR}/"
+        cp diagnose.sh "${TEMP_DIR}/"
+        cp package.sh "${TEMP_DIR}/"
+        cp package.bat "${TEMP_DIR}/"
+        cp package.ps1 "${TEMP_DIR}/"
+        cp Makefile "${TEMP_DIR}/"
+        cp README.md "${TEMP_DIR}/"
+        cp RELEASE.md "${TEMP_DIR}/"
+        cp wuying-test-config.json "${TEMP_DIR}/"
+        cp static-analysis.py "${TEMP_DIR}/"
+        cp unit-test-sim.py "${TEMP_DIR}/"
+        cp coverage-analysis.py "${TEMP_DIR}/"
+        cp integration-test.py "${TEMP_DIR}/"
+        cp run-tests.py "${TEMP_DIR}/"
+        cp bug-test.py "${TEMP_DIR}/"
+        cp bug-test-improved.py "${TEMP_DIR}/"
+        
+        # Create version file
+        cat > "${TEMP_DIR}/VERSION" << EOF
+        LightweightOS Version ${VERSION}
+        Release Date: $(date)
+        Git Commit: ${GITHUB_SHA}
+        EOF
+        
+        # Set permissions
+        find "${TEMP_DIR}" -name "*.sh" -exec chmod +x {} \;
+        find "${TEMP_DIR}" -name "*.py" -exec chmod +x {} \;
+        
+        # Create tar.gz package
+        echo "Creating tar.gz package..."
+        tar -czf "${PACKAGE_NAME}.tar.gz" -C /tmp "${PACKAGE_NAME}"
+        
+        # Create zip package
+        echo "Creating zip package..."
+        cd /tmp
+        zip -r "${PACKAGE_NAME}.zip" "${PACKAGE_NAME}" > /dev/null
+        mv "${PACKAGE_NAME}.zip" "$(pwd)/../${PACKAGE_NAME}.zip"
+        cd -
+        
+        # Show package info
+        echo "Package information:"
+        echo "  TAR.GZ: ${PACKAGE_NAME}.tar.gz ($(stat -c%s "${PACKAGE_NAME}.tar.gz") bytes)"
+        echo "  ZIP: ${PACKAGE_NAME}.zip ($(stat -c%s "${PACKAGE_NAME}.zip") bytes)"
+
+    - name: Create Release
+      id: create_release
+      uses: actions/create-release@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        tag_name: ${{ env.TAG_NAME }}
+        release_name: Release ${{ env.TAG_NAME }}
+        body_path: RELEASE.md
+        draft: false
+        prerelease: false
+
+    - name: Upload tar.gz package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./lightweight-os-v${{ env.VERSION }}.tar.gz
+        asset_name: lightweight-os-v${{ env.VERSION }}.tar.gz
+        asset_content_type: application/gzip
+
+    - name: Upload zip package
+      uses: actions/upload-release-asset@v1
+      env:
+        GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      with:
+        upload_url: ${{ steps.create_release.outputs.upload_url }}
+        asset_path: ./lightweight-os-v${{ env.VERSION }}.zip
+        asset_name: lightweight-os-v${{ env.VERSION }}.zip
+        asset_content_type: application/zip
