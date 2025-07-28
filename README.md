@@ -198,6 +198,33 @@ qemu-system-i386 -fda build/lightweightos.img
 2. 选择 "Build and Test OS" 工作流
 3. 点击 "Run workflow" 按钮
 
+## 推送到 GitHub
+
+如果您想要将此项目推送到您自己的 GitHub 仓库，请按照以下步骤操作：
+  
+  详细信息请参阅 [GitHub 推送指南](GITHUB_PUSH_GUIDE.md)。
+
+1. 在 GitHub 上创建一个新的仓库（例如 `lightweight-os`）
+2. 使用我们提供的脚本推送代码：
+   - 在 Linux/Mac 上：
+     ```bash
+     chmod +x push-to-github.sh
+     ./push-to-github.sh your-github-username your-repo-name
+     ```
+   - 在 Windows 上：
+     ```cmd
+     push-to-github.bat your-github-username your-repo-name
+     ```
+   - 例如：
+     ```bash
+     ./push-to-github.sh wu768627-lgtm lightweight-os
+     ```
+
+3. 如果推送失败，请确保：
+   - 您的网络连接正常
+   - 您已在 GitHub 上创建了同名仓库
+   - 您有权限推送到该仓库
+
 ## 贡献
 
 欢迎提交 Issue 和 Pull Request 来帮助改进 LightweightOS。
